@@ -1,0 +1,235 @@
+CPSC/ECE 3220 - Summer 2017 - Project 3 Assignment
+
+  Due date:         before midnight on the night of Monday, June 19
+  Grading standard: correctness 100%
+  Late penalty:     10% off per day late, up to five days
+  Submission:       turn in "plock.c", with four required functions
+                      using handin.cs.clemson.edu
+                    do not submit a compressed source file
+  Tools needed:     gcc, pthread library
+  Concepts needed:  threads, mutexes, and condition variables
+
+  This is to be an individual programming assignment.
+
+
+GENERAL DESCRIPTION
+
+Your assignment is to write and test four C routines that implement a
+priority lock. This type of lock wakes waiting threads in priority
+order.
+
+As discussed in question 14 on p. 258 in your textbook, a thread calls
+plock_enter( priority ) before entering a priority-ordered critical
+section and calls plock_exit() when leaving. When several threads are
+waiting to enter, the one with the numerically-highest priority should
+be the next thread to be allowed to enter.
+
+There can be multiple instances of the priority lock, so a plock_create()
+function is required along with a plock_destroy().
+
+To implement these functions you should use the mutex and condition
+variable objects from the pthread library.
+
+I will compile your source file with my test driver "main.c" using
+
+    gcc -Wall plock.c main.c -pthread
+
+and test with
+
+    ./a.out
+
+and
+
+    valgrind --tool=helgrind ./a.out
+
+
+GUIDELINES ON PREPARING THE PROGRAM
+
+The code should be written totally by yourself, but you may discuss
+the project requirements and the concepts with me or with anyone in
+the class.
+
+You should not send code to anyone or receive code from anyone, whether
+by email, printed listings, photos, visual display on a workstation/
+laptop/cell-phone/etc. screen, or any other method of communication.
+Do not post the assignment, or a request for help, or your code on any
+web sites.
+
+The key idea is that you shouldn't short-circuit the learning process
+for others once you know the answer. (And you shouldn't burden anyone
+else with inappropriate requests for code or "answers" and thus short-
+circuit your own learning process.)
+
+Turn in a single source file named "plock.c" containing the four public
+functions for testing. Your source file may also contain private helper
+functions as you see fit. I will have my own header file and test driver
+available to compile and link with your code, so do not submit those.
+
+
+REQUIRED HEADER FILE
+
+You are not allowed to change the following header file since it defines
+the public interface for your functions and is the header file that I
+will use to test your code.
+
+#include<stdio.h>
+#include<stdlib.h>
+#include<unistd.h>
+#include<pthread.h>
+
+#define FREE 0
+#define BUSY 1
+
+typedef struct node_def{
+  int priority;		  /* priority of the waiting thread          */
+  pthread_cond_t waitCV;  /* thread waits on this condition variable */
+  struct node_def *next;  /* node is part of a singly-linked list    */
+} node_t;
+
+typedef struct{
+  int value;		  /* FREE or BUSY                            */
+  pthread_mutex_t mlock;  /* mutex protecting the plock structure    */
+  node_t *head;		  /* linked list of waiting threads          */
+} plock_t;
+
+plock_t *plock_create();
+void plock_destroy( plock_t *lock );
+void plock_enter( plock_t *lock, int priority );
+void plock_exit( plock_t *lock );
+
+
+DESCRIPTION OF REQUIRED FUNCTIONS
+
+plock_t *plock_create()
+
+This function calls malloc() to allocate space for an instance of the
+plock_t data type, initializes the plock value to FREE, initializes
+the mutex mlock using the appropriate pthread library call,
+appropriately initializes the waiting list head pointer, and returns
+a pointer to the instance.
+
+void plock_destroy( plock_t *lock );
+
+This function first garbage collects any nodes remaining on the waiting
+list by destroying the condition variables using the appropriate pthread
+library call and freeing the nodes. It then destroys the mutex mlock
+using the appropriate pthread library call and finally frees the plock
+data structure itself.
+
+void plock_enter( plock_t *lock, int priority );
+
+This function checks the state variables of the plock data structure to
+determine if the calling thread can proceed or instead must be added to
+a waiting list. If the thread must be added, a node instance is created
+and the condition variable within the node must be initialized using the
+appropriate pthread library call. (The creation and addition could be
+structured as a private helper function if you wish. Helper functions
+should be contained in the plock.c source file.) The thread can then
+wait on the condition variable in the node.
+
+void plock_exit( plock_t *lock );
+
+This function checks the state variables of the plock data structure to
+determine what update action to take. For example, it may need to signal
+a waiting thread using the appropriate pthread library call.
+
+
+SYNCHRONIZATION CONSIDERATIONS
+
+Please note the following warning about condition variables described by
+Bill Lewis and Daniel Berg in PThreads Primer: A Guide to Multithreaded
+Programming, 1995, on pages 117-118.
+
+    You must reevaluate the condition! First, the other thread may
+    not have tested the complete condition before sending the wakeup.
+    Second, even if the condition was true when the signal was sent,
+    it could have changed before your thread got to run. Third,
+    condition variables allow for spurious wakeups. They are allowed
+    to wakeup for no discernible reason what-so-ever!
+
+For example, if your exit code always sets the state value to FREE,
+then your enter code must handle the situation of a high-priority thread
+calling enter before a signaled thread can enter. That is, consider a
+possible interleaving when a call to exit signals a waiting thread, but
+before the signaled thread can run another thread with higher priority
+calls enter. The higher-priority thread should be allowed to enter, and
+the lower-prioriy thread should resume waiting. Thinking through the
+possible sequences of interleaved actions will guide your design, e.g.,
+when should nodes for waiting threads be created and destroyed?
+
+Making a single test run or even a few test runs is incomplete testing
+and should not leave you confident that your program is correct for all
+possible interleavings of the threads. You may want to insert and/or
+adjust strategic sleep() statements within the test driver to try to
+make the threads call the enter and exit routines at different times.
+
+In some cases you may see sequences of enters and exits not in priority
+order. You will have to determine if this is evidence of a bug in your
+code or an artifact of correctly-executing code responding to calls that
+occur with some amount of time between each other.
+
+You may want to look at tools like helgrind (valgrind.org/docs/manual/
+hg-manual.html) or DRD and techniques like a trace buffer
+(goparallel.sourceforge.net/wp-content/uploads/2013/07/
+Article-MCP-An-Introduction-to-Multi-threaded-Debugging-Techniques.pdf).
+
+You may develop the program anywhere, but the program will be tested and
+must run on one of the School of Computing's Ubuntu 14.04 Linux systems.
+The valgrind tool suite is available on the School of Computing's Ubuntu
+14.04 Linux systems. (Please use systems other than access.cs.clemson.edu).
+
+
+EXAMPLE TEST DRIVER
+
+Note that this test driver tests only a single instance of the lock. A
+more extensive test driver would create and test several instances of
+the priority lock.
+
+/* priority lock (plock) test driver
+ *
+ * compile with:             gcc -Wall plock.c main.c -pthread
+ * run helgrind tests with:  valgrind --tool=helgrind ./a.out
+ */
+
+#include "plock.h"
+
+plock_t *priority_lock;      /* global lock shared among worker threads */
+
+void *worker( void *args ){
+  int thread_id = *( (int *) args );
+  int priority  = *( ( (int *) args ) + 1 );
+  plock_enter( priority_lock, priority );
+  printf( "thread %d starts with priority %d\n", thread_id, priority );
+  sleep( 2 );
+  printf( "thread %d ends\n", thread_id );
+  plock_exit( priority_lock );
+  pthread_exit( NULL );
+}
+
+int main( int argc, char **argv ){
+  pthread_t threads[20];
+  int i;
+  int rc;
+  int args[20][2] =            /* pairs of thread id and priority */
+    { {  0,  0 }, {  1,  5 }, {  2,  3 }, {  3,  4 }, {  4,  1 },
+      {  5, 10 }, {  6, 15 }, {  7, 13 }, {  8, 14 }, {  9, 11 },
+      { 10,  0 }, { 11,  5 }, { 12,  3 }, { 13,  4 }, { 14,  1 },
+      { 15, 10 }, { 16, 15 }, { 17, 13 }, { 18, 14 }, { 19, 11 }  };
+
+  priority_lock = plock_create();
+
+  for( i = 0; i < 20 ; i++ ){
+    rc = pthread_create( &threads[i], NULL, &worker, (void *)( args[i] ) );
+    if( rc ){ printf( "** could not create thread %d\n", i ); exit( -1 ); }
+    if( ( i & 3 ) == 0 ) sleep( 1 );
+  }
+
+  for( i = 0; i < 20; i++ ){
+    rc = pthread_join( threads[i], NULL );
+    if( rc ){ printf( "** could not join thread %d\n", i ); exit( -1 ); }
+  }
+
+  plock_destroy( priority_lock );
+
+  return 0;
+}
