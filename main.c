@@ -7,7 +7,7 @@ void *worker( void *args ){
   int priority  = *( ( (int *) args ) + 1 );                                                                  
   plock_enter( priority_lock, priority );                                                                     
   printf( "thread %d starts with priority %d\n", thread_id, priority );                                       
-  sleep( 2 );                                                                                                 
+  sleep( 1 );                                                                                                 
   printf( "thread %d ends\n", thread_id );                                                                    
   plock_exit( priority_lock );                                                                                
   pthread_exit( NULL );                                                                                       
@@ -18,10 +18,10 @@ int main( int argc, char **argv ){
   int i;                                                                                                      
   int rc;                                                                                                     
   int args[20][2] =            /* pairs of thread id and priority */                                          
-    { {  0,  0 }, {  1,  5 }, {  2,  3 }, {  3,  4 }, {  4,  1 },                                             
-      {  5, 10 }, {  6, 15 }, {  7, 13 }, {  8, 14 }, {  9, 11 },                                             
-      { 10,  0 }, { 11,  5 }, { 12,  3 }, { 13,  4 }, { 14,  1 },                                             
-      { 15, 10 }, { 16, 15 }, { 17, 13 }, { 18, 14 }, { 19, 11 }  };                                          
+    { {  0,  1 }, {  1,  2 }, {  2,  3 }, {  3,  4 }, {  4,  5 },                                             
+      {  5, 6 }, {  6, 7 }, {  7, 8 }, {  8, 9 }, {  9, 10 },                                             
+      { 10,  11 }, { 11,  12 }, { 12,  13 }, { 13,  14 }, { 14,  15 },                                             
+      { 15, 16 }, { 16, 17 }, { 17, 18 }, { 18, 19 }, { 19, 20 }  };                                          
                                                                                                               
   priority_lock = plock_create();                                                                             
                                                                                                               

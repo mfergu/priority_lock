@@ -58,12 +58,15 @@ void plock_enter( P *lock, int priority ){
 		// new node has greater priority than temp
 		temp_prev->next = new_node;
 		new_node->next = temp;
+		pthread_cond_wait(&new_node->waitCV, &lock->mlock);
 	} else {
 		lock->value = BUSY;
+		pthread_mutex_lock(&lock->mlock);
 	}
 }
 
 void plock_exit( P *lock ){
+	pthread_mutex_unlock(&lock);
 	if(lock->head->next != lock->head) {
 		N* temp = lock->head->next;
 		lock->head->next = lock->head->next->next;
