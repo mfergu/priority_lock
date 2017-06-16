@@ -66,7 +66,7 @@ void plock_enter( P *lock, int priority ){
 }
 
 void plock_exit( P *lock ){
-	pthread_mutex_unlock(&lock);
+	pthread_mutex_unlock(&lock->mlock);
 	if(lock->head->next != lock->head) {
 		N* temp = lock->head->next;
 		lock->head->next = lock->head->next->next;

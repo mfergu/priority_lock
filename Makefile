@@ -1,5 +1,5 @@
-CC=clang
-CFLAGS=-std=c11 -Weverything -g -pthread
+CC=gcc
+CFLAGS=-Wall -g -pthread
 BINS=test
 
 test: plock.c main.c
